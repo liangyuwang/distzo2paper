@@ -41,3 +41,36 @@ Each GPU displays CUDA streams for forward compute (blue), CPU-to-GPU upload (St
 Using NVLink with parameter slicing drastically reduces inter-GPU communication time, allowing DistZO2 to maintain high GPU utilization and throughput. This validates the hardware-aware communication strategy introduced in Section 6.1.
 
 ---
+
+### Experiment 3: PP vs. DP (from Figure 2 panels a and c)
+
+Here we compare **Perturbation Parallelism (PP)** and **Distributed Data Parallelism (DP)** under a 2-GPU setup with NVLink interconnect, using **Figure 2 panels (a) and (c)** respectively.
+
+#### Observations:
+- **Figure 2 (panel a): PP**  
+  In this setup, each GPU computes one perturbed direction over a shared input batch. However, due to the dependency on full parameter upload and offload per direction, we observe **insufficient overlap between communication and computation**. The memory streams (red and green) are clearly **not fully hidden by compute**, leading to visible underutilization.
+  
+- **Figure 2 (panel c): DP**  
+  Each GPU performs both +ϵ and −ϵ forward passes on different data shards. This **dual forward** pattern naturally allows more time for upload and offload to proceed in parallel. As shown, memory streams are **much better overlapped with compute**, although the forward pass is longer due to processing two perturbations per step.
+
+#### Conclusion:
+While DP incurs longer compute time, it benefits from **better communication-compute overlap**. PP alone struggles to hide memory operations. This highlights the motivation for combining them into a 2D parallelism strategy, which inherits the best of both.
+
+---
+
+### Experiment 4: Scaling from 2 GPUs to 4 GPUs under PP (from Figure 2 vs. Figure 1 panel a)
+
+We now analyze the effect of increasing GPU count under PP-based parallelism with NVLink.  
+Here, we compare:
+- **Figure 2 (panel a): 2 GPUs, PP**
+- **Figure 1 (panel a): 4 GPUs, PP + DP (with DP = 1)**  
+  This can be viewed as a special case of 2D parallelism where DP group size is 1.
+
+#### Observations:
+- In **Figure 2 (panel a)**, each GPU handles a full perturbed direction and must exchange all missing parameter slices with its peer over NVLink. Despite peer transfer, communication still occupies a noticeable portion of the timeline.
+- In **Figure 1 (panel a)**, with 4 GPUs, the parameter block is divided into 4 shards. Each GPU only needs to receive 3 slices from its neighbors. This **increases the degree of parallel shard exchange**, and the communication is **much better overlapped** with computation.
+
+#### Conclusion:
+The **more GPUs we use, the finer the parameter slicing becomes**, which reduces per-link communication volume and allows peer transfers to be more parallel. This directly supports our design in **Section 6.1**, where we emphasize that shard-level communication becomes increasingly efficient as GPU count increases. As a result, **DistZO2 scales better under more GPUs**, both in terms of communication and overlap scheduling.
+
+---
