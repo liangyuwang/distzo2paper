@@ -74,3 +74,36 @@ Here, we compare:
 The **more GPUs we use, the finer the parameter slicing becomes**, which reduces per-link communication volume and allows peer transfers to be more parallel. This directly supports our design in **Section 6.1**, where we emphasize that shard-level communication becomes increasingly efficient as GPU count increases. As a result, **DistZO2 scales better under more GPUs**, both in terms of communication and overlap scheduling.
 
 ---
+
+## Performance
+
+### Experiment 5: Training Stability under Large Batch Size
+
+To evaluate the convergence behavior of DistZO2 under large-batch settings, we train OPT-13B on two classification tasks—**SST-2** and **BoolQ**—using a batch size of **256**. The training loss curves are shown below.
+
+![Training loss curves on SST-2 and BoolQ with BS=256](figs/loss.png)
+
+**Figure 3: Training loss curves for DistZO2 with large batch size (BS=256) on SST-2 and BoolQ using OPT-13B.**  
+(a) and (b) show the training loss over steps for SST-2 and BoolQ respectively. Despite the large batch size, the loss decreases smoothly on both tasks, confirming that DistZO2 maintains stable convergence even under large-batch distributed settings.
+
+#### Observations:
+- On **SST-2** (left), the loss curve decreases steadily and smoothly, indicating well-behaved convergence.
+- On **BoolQ** (right), while there is more fluctuation—due to the nature of the dataset—the downward trend is clear and stable.
+
+#### Conclusion:
+These results demonstrate that **DistZO2 remains stable and effective even with large batch sizes**, making it suitable for scaling up distributed zeroth-order training across GPUs without loss of optim
+
+### Experiment 6: Final Accuracy Comparison on SST-2 and BoolQ
+
+To confirm that DistZO2 maintains task performance while improving training throughput, we compare its final accuracy to the baseline MeZO on two classification datasets.
+
+| Dataset | MeZO Accuracy (%) | DistZO2 Accuracy (%) |
+|---------|-------------------|----------------------|
+| SST-2   | 91.4              | 91.4                 |
+| BoolQ   | 67.6              | 67.6                 |
+
+**Table Z: Final accuracy comparison between MeZO and DistZO2 using OPT-13B.**
+
+#### Conclusion:
+The results show that **DistZO2 preserves the final task accuracy of the original MeZO** across both SST-2 and BoolQ. This confirms that our distributed optimization strategies—including PP, DP, and offloading-aware scheduling—do not degrade model quality. DistZO2 successfully scales zeroth-order optimization without sacrificing correctness.
+
